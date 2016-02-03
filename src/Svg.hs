@@ -39,7 +39,17 @@ strokeToString (Stroke cm wm) = maybeToAttr cm colorToString ++
                                 maybeToAttr wm widthToString where
                                   colorToString c = "stroke=\"" ++ c ++ "\""
                                   widthToString w = "stroke-width=\"" ++ show w ++ "\""
-  
+
+strokeWidthMap :: (Double -> Double) -> Stroke -> Stroke
+strokeWidthMap f (Stroke cm wm) = Stroke cm (f <$> wm)
+
+data TransformPair = TransformPair {
+  transformString :: String,
+  inverseTransformString :: String
+  } deriving Eq
+
+transformStringAttribute :: String -> String
+transformStringAttribute ts = "transform=\"" ++ ts ++ "\""
 
 maybeToAttr :: Maybe a -> (a -> String) -> String
 maybeToAttr maybe toStr =
@@ -62,15 +72,20 @@ epilogue :: Maybe String -> String
 epilogue svgPrefixMaybe = let pref = maybePrefix svgPrefixMaybe in
   "</" ++ pref ++ "g></" ++ pref ++ "svg>"
 
-drawGraph :: [(Double, Double)] -> Maybe Int -> Maybe String -> Stroke -> String
-drawGraph pnts highlightMaybe svgPrefixMaybe stroke =
+drawGraph :: [(Double, Double)] -> Maybe Int -> Maybe String -> Maybe TransformPair -> Stroke -> String
+drawGraph pnts highlightMaybe svgPrefixMaybe transformPairMaybe stroke =
   "<" ++ maybePrefix svgPrefixMaybe ++ "path" ++
   strokeToString stroke ++
   " fill=\"none\" d=\"M " ++ pairToString (head pnts) ++
   " L" ++ (foldr (\s1 s2 -> (' ' : s1) ++ s2) "" (map pairToString (tail pnts))) ++
-  "\" />" ++ (fromMaybe "" ((\i -> let (cx, cy) = (pnts !! i) in
-    ("<" ++ maybePrefix svgPrefixMaybe ++ "circle transform=\"translate(" ++ show cx ++ " " ++ show cy ++
-     ") scale(" ++ show (256.0 / 8.0) ++ " 1)\" cx=\"0\" cy=\"0\" r=\"" ++
+  "\" " ++
+  fromMaybe "" ((transformStringAttribute . transformString) <$> transformPairMaybe) ++
+  " />" ++ (fromMaybe "" ((\i -> let (cx, cy) = (pnts !! i) in
+    ("<" ++ maybePrefix svgPrefixMaybe ++ "circle transform=\"" ++
+     fromMaybe "" (transformString <$> transformPairMaybe) ++
+     " translate(" ++ show cx ++ " " ++ show cy ++ ")" ++
+     fromMaybe "" (((' ' :) . inverseTransformString) <$> transformPairMaybe) ++
+     "\" cx=\"0\" cy=\"0\" r=\"" ++ 
      fromMaybe "1" (show <$> strokeWidthMaybe stroke) ++ "\"" ++
      (fromMaybe "" ((\s -> " fill=\"" ++ s ++ "\"") <$> (strokeColorMaybe stroke))) ++ "/>")) <$> highlightMaybe))
   where
