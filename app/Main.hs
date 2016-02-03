@@ -6,6 +6,7 @@ import Dft
 import Data.Foldable
 import System.Environment
 import Data.Maybe
+import Util
 
 _N = 256 :: Int
 _N_Minus1 = _N - 1 :: Int
@@ -34,7 +35,7 @@ main = do
       dasharray = fromMaybe "2" ((show . (*2)) <$> strokeWidthMaybe graphStroke) ++
                   fromMaybe " 1" (((' ' :) . show) <$> strokeWidthMaybe graphStroke)
       helperStroke = strokeWidthMap (/4) graphStroke
-  for_ (zip (animateFreq (map realToComplex signal) f) [0..])
+  for_ (zip (animateFreq (map realToComplex signal) f (_N `div` f)) [0..])
     (\(content, num) ->
       writeFile ("graph" ++ show num ++ ".svg") (
         prologue Nothing "xlink" (Just (WidthHeight "600" "600")) (Just $ ViewBox "-5" "-5" "10" "10") ++
@@ -57,11 +58,25 @@ main = do
   
     
   
-animateFreq :: (RealFloat a, Show a) => [Complex a] -> Int -> [String]
-animateFreq signal f = 
-  map partToString ((tail . reverse) (correlateSignalAtFreq signal f)) where
-    partToString (s, wavePart, sum) =
-      drawComplex (sum / (2 * sqrt (fromIntegral (length signal)) :+ 0.0)) Nothing (Stroke (Just "blue") (Just 0.03)) ++      
+animateFreq :: (RealFloat a, Show a) => [Complex a] -> Int -> Int -> [String]
+animateFreq signal f sumTraceN = let
+  functionValues = ((map (\(s, wp, sum) -> (s, wp, sum / (2 * sqrt (fromIntegral (length signal)))))) . tail . reverse) (correlateSignalAtFreq signal f)
+  lastN = lastNWindow sumTraceN functionValues in
+  map partToString (zip functionValues lastN) where
+    partToString ((s, wavePart, sum), lastNTuples) =
+      let opacities = [1.0 - (fromIntegral i) / (fromIntegral sumTraceN)  | i <- [0..sumTraceN - 1]]
+          lastComplexes = zip lastNTuples opacities
+          lastComplexesDraws =
+            map
+            (\((_, _, a :+ b), opacity) ->
+              "<" ++ maybePrefix Nothing ++ "circle fill=\"blue\" cx=\"" ++ show a ++
+              "\" cy=\"" ++ show b ++ "\" r=\"0.01\" opacity=\"" ++ show opacity ++
+              "\" />"
+            )
+            lastComplexes
+      in
+      drawComplex sum Nothing (Stroke (Just "blue") (Just 0.03)) ++
+      foldr1 (++) lastComplexesDraws ++
       drawComplex wavePart Nothing (Stroke (Just "green") (Just 0.02)) ++
       drawComplex s Nothing (Stroke (Just "red") (Just 0.01))
 
