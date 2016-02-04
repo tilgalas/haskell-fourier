@@ -30,8 +30,6 @@ main = do
   let f = (read . head) args
       graphStroke = Stroke (Just "black") (Just 0.03)
       graphScale = 8 / (fromIntegral _N)
-      graphTransformPair = TransformPair ("scale(" ++ show graphScale ++ " 1)")
-                           ("scale(" ++ show (1 / graphScale) ++ " 1)")
       dasharray = fromMaybe "2" ((show . (*2)) <$> strokeWidthMaybe graphStroke) ++
                   fromMaybe " 1" (((' ' :) . show) <$> strokeWidthMaybe graphStroke)
       helperStroke = strokeWidthMap (/4) graphStroke
@@ -52,7 +50,7 @@ main = do
         " stroke-dasharray=\"" ++ dasharray ++ "\" x1=\"" ++ show (-5 * graphScale) ++ "\" y1=\"0\"" ++
         " x2=\"" ++ show ((fromIntegral (_N + 5)) * graphScale) ++ "\" y2=\"0\" " ++
         " />" ++
-        drawGraph (zip [0..(fromIntegral _N_Minus1)] signal) (Just num) Nothing (Just graphTransformPair) graphStroke ++
+        drawGraph (Just num) Nothing graphScale 1.0 graphStroke (zip [0..(fromIntegral _N_Minus1)] signal) ++
         "</g>" ++
         epilogue Nothing))
   

@@ -43,14 +43,6 @@ strokeToString (Stroke cm wm) = maybeToAttr cm colorToString ++
 strokeWidthMap :: (Double -> Double) -> Stroke -> Stroke
 strokeWidthMap f (Stroke cm wm) = Stroke cm (f <$> wm)
 
-data TransformPair = TransformPair {
-  transformString :: String,
-  inverseTransformString :: String
-  } deriving Eq
-
-transformStringAttribute :: String -> String
-transformStringAttribute ts = "transform=\"" ++ ts ++ "\""
-
 maybeToAttr :: Maybe a -> (a -> String) -> String
 maybeToAttr maybe toStr =
   fromMaybe "" (((' ' :) . toStr) <$> maybe)
@@ -72,20 +64,16 @@ epilogue :: Maybe String -> String
 epilogue svgPrefixMaybe = let pref = maybePrefix svgPrefixMaybe in
   "</" ++ pref ++ "g></" ++ pref ++ "svg>"
 
-drawGraph :: [(Double, Double)] -> Maybe Int -> Maybe String -> Maybe TransformPair -> Stroke -> String
-drawGraph pnts highlightMaybe svgPrefixMaybe transformPairMaybe stroke =
+drawGraph :: Maybe Int -> Maybe String -> Double -> Double -> Stroke -> [(Double, Double)] -> String
+drawGraph highlightMaybe svgPrefixMaybe xScale yScale stroke pnts =
+  let scaledPnts = map (\(x, y) -> (x * xScale, y * yScale)) pnts in
   "<" ++ maybePrefix svgPrefixMaybe ++ "path" ++
   strokeToString stroke ++
-  " fill=\"none\" d=\"M " ++ pairToString (head pnts) ++
-  " L" ++ (foldr (\s1 s2 -> (' ' : s1) ++ s2) "" (map pairToString (tail pnts))) ++
-  "\" " ++
-  fromMaybe "" ((transformStringAttribute . transformString) <$> transformPairMaybe) ++
-  " />" ++ (fromMaybe "" ((\i -> let (cx, cy) = (pnts !! i) in
-    ("<" ++ maybePrefix svgPrefixMaybe ++ "circle transform=\"" ++
-     fromMaybe "" (transformString <$> transformPairMaybe) ++
-     " translate(" ++ show cx ++ " " ++ show cy ++ ")" ++
-     fromMaybe "" (((' ' :) . inverseTransformString) <$> transformPairMaybe) ++
-     "\" cx=\"0\" cy=\"0\" r=\"" ++ 
+  " fill=\"none\" d=\"M " ++ pairToString (head scaledPnts) ++
+  " L" ++ (foldr (\s1 s2 -> (' ' : s1) ++ s2) "" (map pairToString (tail scaledPnts))) ++
+  "\" />" ++ (fromMaybe "" ((\i -> let (cx, cy) = (scaledPnts !! i) in
+    ("<" ++ maybePrefix svgPrefixMaybe ++
+     "circle cx=\"" ++ show cx ++"\" cy=\"" ++ show cy ++ "\" r=\"" ++ 
      fromMaybe "1" (show <$> strokeWidthMaybe stroke) ++ "\"" ++
      (fromMaybe "" ((\s -> " fill=\"" ++ s ++ "\"") <$> (strokeColorMaybe stroke))) ++ "/>")) <$> highlightMaybe))
   where
