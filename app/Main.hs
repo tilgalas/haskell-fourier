@@ -7,6 +7,8 @@ import Data.Foldable
 import System.Environment
 import Data.Maybe
 import Util
+import qualified Data.Vector as V
+import Numeric.FFT.Vector.Invertible
 
 _N = 256 :: Int
 _N_Minus1 = _N - 1 :: Int
@@ -24,6 +26,16 @@ signal = approxSawtooth 10
 realToComplex :: (Floating a) => a -> Complex a
 realToComplex a = a :+ 0
 
+freqDomain :: [Complex Double]
+freqDomain = let timeDomain = (V.fromList signal) in
+  V.toList $ run dftR2C timeDomain
+
+freqDomainAmp :: [Double]
+freqDomainAmp = map magnitude freqDomain
+
+prefix :: Maybe String
+prefix = Nothing
+
 main :: IO ()
 main = do
   args <- getArgs
@@ -40,25 +52,30 @@ main = do
         content ++
         "<g transform=\"translate(-4 -3)\">" ++
         foldr1 (++) (map (\i -> let x = fromIntegral (i * _N) / (fromIntegral f) in
-                           "<" ++ maybePrefix Nothing ++
+                           "<" ++ maybePrefix prefix ++
                            "line" ++ strokeToString helperStroke ++
                            " stroke-dasharray=\"" ++
                            dasharray ++
                            "\" x1=\"0\" y1=\"1\" x2=\"0\" y2=\"-1\"" ++
                            " transform=\"translate(" ++ show (x * graphScale) ++ " 0)\" />") [0..f]) ++
-        "<" ++ maybePrefix Nothing ++ "line" ++ strokeToString helperStroke ++ 
+        "<" ++ maybePrefix prefix ++ "line" ++ strokeToString helperStroke ++ 
         " stroke-dasharray=\"" ++ dasharray ++ "\" x1=\"" ++ show (-5 * graphScale) ++ "\" y1=\"0\"" ++
         " x2=\"" ++ show ((fromIntegral (_N + 5)) * graphScale) ++ "\" y2=\"0\" " ++
         " />" ++
         drawGraph (Just num) Nothing graphScale 1.0 graphStroke (zip [0..(fromIntegral _N_Minus1)] signal) ++
-        "</g>" ++
+        "</" ++ maybePrefix prefix ++ "g>" ++
+        "<" ++ maybePrefix prefix ++ "g transform=\"translate(-4 2)\">" ++
+        drawGraph (Just f) Nothing (graphScale * 2) (freqDomainScale / 2) graphStroke (zip [0..(fromIntegral _N_Minus1)] freqDomainAmp) ++
+        "</" ++ maybePrefix prefix ++ "g>" ++
         epilogue Nothing))
   
-    
+
+freqDomainScale :: RealFloat a => a
+freqDomainScale = 1 / (2 * sqrt (fromIntegral (length signal)))
   
 animateFreq :: (RealFloat a, Show a) => [Complex a] -> Int -> Int -> [String]
 animateFreq signal f sumTraceN = let
-  functionValues = ((map (\(s, wp, sum) -> (s, wp, sum / (2 * sqrt (fromIntegral (length signal)))))) . tail . reverse) (correlateSignalAtFreq signal f)
+  functionValues = ((map (\(s, wp, sum) -> (s, wp, sum * (freqDomainScale :+ 0)))) . tail . reverse) (correlateSignalAtFreq signal f)
   lastN = lastNWindow sumTraceN functionValues in
   map partToString (zip functionValues lastN) where
     partToString ((s, wavePart, sum), lastNTuples) =
@@ -67,7 +84,7 @@ animateFreq signal f sumTraceN = let
           lastComplexesDraws =
             map
             (\((_, _, a :+ b), opacity) ->
-              "<" ++ maybePrefix Nothing ++ "circle fill=\"blue\" cx=\"" ++ show a ++
+              "<" ++ maybePrefix prefix ++ "circle fill=\"blue\" cx=\"" ++ show a ++
               "\" cy=\"" ++ show b ++ "\" r=\"0.01\" opacity=\"" ++ show opacity ++
               "\" />"
             )
