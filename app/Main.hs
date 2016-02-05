@@ -50,7 +50,7 @@ main = do
       writeFile ("graph" ++ show num ++ ".svg") (
         prologue Nothing "xlink" (Just (WidthHeight "600" "600")) (Just $ ViewBox "-5" "-5" "10" "10") ++
         content ++
-        "<g transform=\"translate(-4 -3)\">" ++
+        "<g transform=\"translate(-4 3)\">" ++
         foldr1 (++) (map (\i -> let x = fromIntegral (i * _N) / (fromIntegral f) in
                            "<" ++ maybePrefix prefix ++
                            "line" ++ strokeToString helperStroke ++
@@ -64,8 +64,8 @@ main = do
         " />" ++
         drawGraph (Just num) Nothing graphScale 1.0 graphStroke (zip [0..(fromIntegral _N_Minus1)] signal) ++
         "</" ++ maybePrefix prefix ++ "g>" ++
-        "<" ++ maybePrefix prefix ++ "g transform=\"translate(-4 2)\">" ++
-        drawGraph (Just f) Nothing (graphScale * 2) (freqDomainScale / 2) graphStroke (zip [0..(fromIntegral _N_Minus1)] freqDomainAmp) ++
+        "<" ++ maybePrefix prefix ++ "g transform=\"translate(-4 -4)\">" ++
+        drawGraph (Just f) Nothing (graphScale * 2) freqDomainScale graphStroke (zip [0..(fromIntegral _N_Minus1)] freqDomainAmp) ++
         "</" ++ maybePrefix prefix ++ "g>" ++
         epilogue Nothing))
   
