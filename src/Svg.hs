@@ -64,20 +64,16 @@ epilogue :: Maybe String -> String
 epilogue svgPrefixMaybe = let pref = maybePrefix svgPrefixMaybe in
   "</" ++ pref ++ "g></" ++ pref ++ "svg>"
 
-drawGraph :: Maybe Int -> Maybe String -> Double -> Double -> Stroke -> [(Double, Double)] -> String
-drawGraph highlightMaybe svgPrefixMaybe xScale yScale stroke pnts =
-  let scaledPnts = map (\(x, y) -> (x * xScale, y * yScale)) pnts in
-  "<" ++ maybePrefix svgPrefixMaybe ++ "path" ++
-  strokeToString stroke ++
-  " fill=\"none\" d=\"M " ++ pairToString (head scaledPnts) ++
-  " L" ++ (foldr (\s1 s2 -> (' ' : s1) ++ s2) "" (map pairToString (tail scaledPnts))) ++
-  "\" />" ++ (fromMaybe "" ((\i -> let (cx, cy) = (scaledPnts !! i) in
-    ("<" ++ maybePrefix svgPrefixMaybe ++
-     "circle cx=\"" ++ show cx ++"\" cy=\"" ++ show cy ++ "\" r=\"" ++ 
-     fromMaybe "1" (show <$> strokeWidthMaybe stroke) ++ "\"" ++
-     (fromMaybe "" ((\s -> " fill=\"" ++ s ++ "\"") <$> (strokeColorMaybe stroke))) ++ "/>")) <$> highlightMaybe))
-  where
-    pairToString (x, y) = show x ++ " " ++ show y
+drawGraph :: Maybe String -> Double -> Double -> Stroke -> [(Double, Double)] -> String
+drawGraph svgPrefixMaybe xScale yScale stroke pnts =
+  let scaledPnts = map (\(x, y) -> (x * xScale, y * yScale)) pnts
+      pairToString (x, y) = show x ++ " " ++ show y
+  in
+   "<" ++ maybePrefix svgPrefixMaybe ++ "path" ++
+   strokeToString stroke ++
+   " fill=\"none\" d=\"M " ++ pairToString (head scaledPnts) ++
+   " L" ++ (foldr (\s1 s2 -> (' ' : s1) ++ s2) "" (map pairToString (tail scaledPnts))) ++
+   "\" />"
 
 
 drawComplex :: Show a => Complex a -> Maybe String -> Stroke -> String

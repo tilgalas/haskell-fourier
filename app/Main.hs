@@ -45,12 +45,10 @@ main = do
       dasharray = fromMaybe "2" ((show . (*2)) <$> strokeWidthMaybe graphStroke) ++
                   fromMaybe " 1" (((' ' :) . show) <$> strokeWidthMaybe graphStroke)
       helperStroke = strokeWidthMap (/4) graphStroke
-  for_ (zip (animateFreq (map realToComplex signal) f (_N `div` f)) [0..])
-    (\(content, num) ->
-      writeFile ("graph" ++ show num ++ ".svg") (
-        prologue Nothing "xlink" (Just (WidthHeight "600" "600")) (Just $ ViewBox "-5" "-5" "10" "10") ++
-        content ++
-        "<g transform=\"translate(-4 3)\">" ++
+      signalGraphTransform = "translate(-4 3)"
+  writeFile "background.svg" (
+    prologue prefix "xlink" (Just (WidthHeight "600" "600")) (Just $ ViewBox "-5" "-5" "10" "10") ++
+        "<" ++ maybePrefix prefix ++ "g transform=\"" ++ signalGraphTransform ++ "\">" ++
         foldr1 (++) (map (\i -> let x = fromIntegral (i * _N) / (fromIntegral f) in
                            "<" ++ maybePrefix prefix ++
                            "line" ++ strokeToString helperStroke ++
@@ -62,12 +60,28 @@ main = do
         " stroke-dasharray=\"" ++ dasharray ++ "\" x1=\"" ++ show (-5 * graphScale) ++ "\" y1=\"0\"" ++
         " x2=\"" ++ show ((fromIntegral (_N + 5)) * graphScale) ++ "\" y2=\"0\" " ++
         " />" ++
-        drawGraph (Just num) Nothing graphScale 1.0 graphStroke (zip [0..(fromIntegral _N_Minus1)] signal) ++
+        drawGraph prefix graphScale 1.0 graphStroke (zip [0..(fromIntegral _N_Minus1)] signal) ++
         "</" ++ maybePrefix prefix ++ "g>" ++
         "<" ++ maybePrefix prefix ++ "g transform=\"translate(-4 -4)\">" ++
-        drawGraph (Just f) Nothing (graphScale * 2) freqDomainScale graphStroke (zip [0..(fromIntegral _N_Minus1)] freqDomainAmp) ++
+        drawGraph prefix (graphScale * 2) freqDomainScale graphStroke (zip [0..(fromIntegral _N_Minus1)] freqDomainAmp) ++
+        "<" ++ maybePrefix prefix ++ "circle cx=\"" ++ show ((fromIntegral f) * graphScale * 2) ++ "\" cy=\"" ++
+        show ((freqDomainAmp !! f) * freqDomainScale)  ++ "\" r=\"" ++
+        fromMaybe "1" (show <$> strokeWidthMaybe graphStroke) ++ "\"" ++
+        (fromMaybe "" ((\s -> " fill=\"" ++ s ++ "\"") <$> (strokeColorMaybe graphStroke))) ++ "/>" ++
         "</" ++ maybePrefix prefix ++ "g>" ++
-        epilogue Nothing))
+        epilogue prefix
+    )
+  for_ (zip3 (animateFreq (map realToComplex signal) f (_N `div` f)) [0..] signal)
+    (\(content, num, s) ->
+      writeFile ("graph" ++ show num ++ ".svg") (
+        prologue prefix "xlink" (Just (WidthHeight "600" "600")) (Just $ ViewBox "-5" "-5" "10" "10") ++
+        content ++
+        "<" ++ maybePrefix prefix ++ "g transform=\"" ++ signalGraphTransform ++ "\">" ++
+        "<" ++ maybePrefix prefix ++ "circle cx=\"" ++ show ((fromIntegral num) * graphScale) ++ "\" cy=\"" ++ show s ++ "\" r=\"" ++
+        fromMaybe "1" (show <$> strokeWidthMaybe graphStroke) ++ "\"" ++
+        (fromMaybe "" ((\s -> " fill=\"" ++ s ++ "\"") <$> (strokeColorMaybe graphStroke))) ++ "/>" ++
+        "</" ++ maybePrefix prefix ++ "g>" ++
+        epilogue prefix))
   
 
 freqDomainScale :: RealFloat a => a
@@ -90,8 +104,8 @@ animateFreq signal f sumTraceN = let
             )
             lastComplexes
       in
-      drawComplex sum Nothing (Stroke (Just "blue") (Just 0.03)) ++
+      drawComplex sum prefix (Stroke (Just "blue") (Just 0.03)) ++
       foldr1 (++) lastComplexesDraws ++
-      drawComplex wavePart Nothing (Stroke (Just "green") (Just 0.02)) ++
-      drawComplex s Nothing (Stroke (Just "red") (Just 0.01))
+      drawComplex wavePart prefix (Stroke (Just "green") (Just 0.02)) ++
+      drawComplex s prefix (Stroke (Just "red") (Just 0.01))
 

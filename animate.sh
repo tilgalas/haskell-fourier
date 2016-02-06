@@ -2,11 +2,12 @@
 
 set -e
 
-echo "$(for f in `ls *.svg`
+echo -e "background.svg -b white -e background.png\n
+$(for f in `ls graph*.svg`
 do
-    echo $f -b white -e `basename -s .svg $f`.png
+    echo $f -e `basename -s .svg $f`.png
 done)" | inkscape --shell
 
-convert -delay 1x30 `ls *.png | sort -V` $1
+convert  -delay 0 background.png -dispose previous -delay 1x30 `ls graph*.png | sort -V` -coalesce -delete 0 -loop 0 -layers optimize $1
 	 
 rm *.svg *.png
