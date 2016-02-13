@@ -31,7 +31,10 @@ freqDomain = let timeDomain = (V.fromList signal) in
   V.toList $ run dftR2C timeDomain
 
 freqDomainAmp :: [Double]
-freqDomainAmp = map magnitude freqDomain
+freqDomainAmp = let (h : t) = freqDomain
+                    (m, l) = splitAt (length t - 1) t in
+  (magnitude h / 2) : (map magnitude m) ++ (map ((/2) . magnitude) l)
+
 
 prefix :: Maybe String
 prefix = Nothing
